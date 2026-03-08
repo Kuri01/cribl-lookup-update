@@ -31,6 +31,7 @@ export type LookupUpdateRequest = {
   groupName?: string;
   lookupId?: string;
   mode?: 'memory' | 'disk';
+  deploy?: boolean;
   dryRun?: boolean;
 };
 

@@ -16,6 +16,23 @@ function buildAuthPath(baseUrl: string): string {
   return `${normalizedBase}/auth/login`;
 }
 
+function baseWithoutManagedGroup(baseUrl: string): string {
+  return baseUrl.replace(/\/+$/, '').replace(/\/m\/[^/]+$/, '');
+}
+
+function buildGroupInfoPath(baseUrl: string, groupName: string): string {
+  const base = baseWithoutManagedGroup(baseUrl);
+  const params = new URLSearchParams({
+    fields: 'git.log,git.commit,git.localChanges,lookups',
+  });
+  return `${base}/master/groups/${encodeURIComponent(groupName)}?${params.toString()}`;
+}
+
+function buildGroupDeployPath(baseUrl: string, groupName: string): string {
+  const base = baseWithoutManagedGroup(baseUrl);
+  return `${base}/master/groups/${encodeURIComponent(groupName)}/deploy`;
+}
+
 function normalizeToken(token: string): string {
   return token.replace(/^Bearer\s+/i, '').trim();
 }
@@ -30,6 +47,27 @@ export class CriblApiError extends Error {
     this.name = 'CriblApiError';
   }
 }
+
+export type GroupInfoResponse = {
+  items?: Array<{
+    git?: { commit?: string };
+    lookupDeployments?: Array<{
+      context?: string;
+      lookups?: Array<{ file?: string; version?: string }>;
+    }>;
+  }>;
+};
+
+export type DeployLookupsPayload = {
+  version: string;
+  lookups: Array<{
+    context: string;
+    lookups: Array<{
+      file: string;
+      version: string;
+    }>;
+  }>;
+};
 
 @Injectable()
 export class CriblLookupsClient {
@@ -154,6 +192,49 @@ export class CriblLookupsClient {
       throw new CriblApiError('Failed to create lookup in Cribl.', response.status, body);
     }
 
+    return body;
+  }
+
+  async getGroupInfo(input: {
+    baseUrl: string;
+    groupName: string;
+    token: string;
+  }): Promise<GroupInfoResponse> {
+    const url = buildGroupInfoPath(input.baseUrl, input.groupName);
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${normalizeToken(input.token)}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const body = (await response.json()) as GroupInfoResponse;
+    if (!response.ok) {
+      throw new CriblApiError('Failed to fetch group info from Cribl.', response.status, body);
+    }
+    return body;
+  }
+
+  async deployLookups(input: {
+    baseUrl: string;
+    groupName: string;
+    token: string;
+    payload: DeployLookupsPayload;
+  }): Promise<unknown> {
+    const url = buildGroupDeployPath(input.baseUrl, input.groupName);
+    const response = await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${normalizeToken(input.token)}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(input.payload),
+    });
+    const body = (await response.json()) as unknown;
+    if (!response.ok) {
+      throw new CriblApiError('Failed to deploy lookup changes to Cribl workers.', response.status, body);
+    }
     return body;
   }
 }

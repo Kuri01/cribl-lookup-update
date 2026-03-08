@@ -4,7 +4,12 @@ import { AppConfig } from '../config/app-config';
 import { CmdbCsvSerializer } from '../cmdb/cmdb-csv.serializer';
 import { CmdbRepository } from '../cmdb/cmdb.repository';
 import { LookupUpdateRequest } from '../cmdb/cmdb.types';
-import { CriblApiError, CriblLookupsClient } from '../cribl/cribl-lookups.client';
+import {
+  CriblApiError,
+  CriblLookupsClient,
+  DeployLookupsPayload,
+  GroupInfoResponse,
+} from '../cribl/cribl-lookups.client';
 
 export class RequestValidationError extends Error {
   constructor(message: string) {
@@ -24,6 +29,7 @@ export class LookupUpdateService {
 
   async execute(request: LookupUpdateRequest): Promise<unknown> {
     const dryRun = Boolean(request.dryRun);
+    const shouldDeploy = request.deploy ?? true;
     const criblBaseUrl = request.criblBaseUrl ?? this.config.defaultCriblApiBaseUrl;
     const explicitToken = request.token ?? this.config.defaultCriblToken;
     const username = request.username ?? this.config.defaultCriblUsername;
@@ -35,6 +41,9 @@ export class LookupUpdateService {
 
     if (!criblBaseUrl) {
       throw new RequestValidationError('Missing criblBaseUrl (or CRIBL_API_BASE_URL env).');
+    }
+    if (shouldDeploy && !dryRun && !groupName) {
+      throw new RequestValidationError('Missing groupName required for deploy (or CRIBL_GROUP_NAME env).');
     }
 
     if (!explicitToken && !dryRun && (!username || !password)) {
@@ -54,6 +63,7 @@ export class LookupUpdateService {
 
       return {
         dryRun: true,
+        deploy: shouldDeploy,
         uploadUrl: `${lookupsPath}?filename=${encodeURIComponent(lookupId)}`,
         patchUrl: `${lookupsPath}/${encodeURIComponent(lookupId)}`,
         lookupId,
@@ -105,12 +115,36 @@ export class LookupUpdateService {
       operation = 'created';
     }
 
+    let deployResult: unknown = null;
+    let lookupVersion: string | null = null;
+    if (shouldDeploy) {
+      lookupVersion = this.extractLookupVersion(result);
+      if (!lookupVersion) {
+        throw new RequestValidationError('Could not determine lookup version for deploy.');
+      }
+      const groupInfo = await this.criblClient.getGroupInfo({
+        baseUrl: criblBaseUrl,
+        groupName: groupName as string,
+        token,
+      });
+      const deployPayload = this.buildDeployPayload(groupInfo, lookupId, lookupVersion);
+      deployResult = await this.criblClient.deployLookups({
+        baseUrl: criblBaseUrl,
+        groupName: groupName as string,
+        token,
+        payload: deployPayload,
+      });
+    }
+
     return {
       success: true,
       operation,
+      deployed: shouldDeploy,
       lookupId,
+      lookupVersion,
       uploadedTempFile: uploadResult.filename,
       criblResponse: result,
+      deployResponse: deployResult,
     };
   }
 
@@ -122,5 +156,66 @@ export class LookupUpdateService {
     const message = (error.responseBody as { message?: unknown }).message;
     if (typeof message !== 'string') return false;
     return /does not exist/i.test(message);
+  }
+
+  private extractLookupVersion(criblResponse: unknown): string | null {
+    if (typeof criblResponse !== 'object' || criblResponse === null) return null;
+
+    const items = (criblResponse as { items?: unknown }).items;
+    if (Array.isArray(items) && items.length > 0) {
+      const version = (items[0] as { version?: unknown }).version;
+      if (typeof version === 'string' && version.trim().length > 0) return version;
+    }
+
+    const directVersion = (criblResponse as { version?: unknown }).version;
+    if (typeof directVersion === 'string' && directVersion.trim().length > 0) return directVersion;
+
+    return null;
+  }
+
+  private buildDeployPayload(
+    groupInfo: GroupInfoResponse,
+    lookupId: string,
+    lookupVersion: string,
+  ): DeployLookupsPayload {
+    const group = groupInfo.items?.[0];
+    const commit = group?.git?.commit;
+    if (!commit) {
+      throw new RequestValidationError('Could not determine group commit for deploy.');
+    }
+
+    const existing = group.lookupDeployments ?? [];
+    const lookupsByContext = existing.map((entry) => ({
+      context: entry.context || 'cribl',
+      lookups: (entry.lookups ?? [])
+        .filter((l) => Boolean(l.file && l.version))
+        .map((l) => ({ file: l.file as string, version: l.version as string })),
+    }));
+
+    let updated = false;
+    for (const ctx of lookupsByContext) {
+      const idx = ctx.lookups.findIndex((l) => l.file === lookupId);
+      if (idx >= 0) {
+        ctx.lookups[idx] = { file: lookupId, version: lookupVersion };
+        updated = true;
+      }
+    }
+
+    if (!updated) {
+      const targetCtx = lookupsByContext.find((c) => c.context === 'cribl') ?? lookupsByContext[0];
+      if (targetCtx) {
+        targetCtx.lookups.push({ file: lookupId, version: lookupVersion });
+      } else {
+        lookupsByContext.push({
+          context: 'cribl',
+          lookups: [{ file: lookupId, version: lookupVersion }],
+        });
+      }
+    }
+
+    return {
+      version: commit,
+      lookups: lookupsByContext,
+    };
   }
 }

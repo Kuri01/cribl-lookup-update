@@ -100,7 +100,10 @@ docker run --rm --network cribl_default curlimages/curl:8.12.1 -sS http://mock-c
 
 ## Update Cribl Lookup from Mock CMDB
 
-The mock service can run the Cribl lookup update flow (`PUT /system/lookups` then `PATCH /system/lookups/{id}`) using `jira-cmdb/data.json` converted to CSV.
+The mock service runs the full Cribl lookup flow using `jira-cmdb/data.json` converted to CSV:
+- Upload file (`PUT /system/lookups`)
+- Replace or create lookup (`PATCH` / fallback `POST /system/lookups`)
+- Selective deploy to worker group (`PATCH /master/groups/{groupName}/deploy`)
 If the lookup does not exist, the service automatically creates it (`POST /system/lookups`) after upload.
 
 Required:
@@ -127,6 +130,14 @@ curl -sS -X POST http://localhost:13000/cribl/lookups/update \
     "groupName": "default",
     "lookupId": "jira_cmdb_mock.csv"
   }' | jq
+```
+
+Disable deploy (only upload + replace/create):
+
+```bash
+curl -sS -X POST http://localhost:13000/cribl/lookups/update \
+  -H 'Content-Type: application/json' \
+  -d '{"deploy": false}' | jq
 ```
 
 You can also set defaults in `docker-compose.yml` via:
