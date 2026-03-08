@@ -1,5 +1,5 @@
 node_modules/
 .turbo/
-jira-cmdb/node_modules/
-jira-cmdb/dist/
+jira-cmdb-api/node_modules/
+jira-cmdb-api/dist/
 .env

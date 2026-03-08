@@ -1,9 +1,9 @@
 services:
-  mock-cmdb:
+  jira-cmdb-api:
     build:
-      context: ./jira-cmdb
-    container_name: mock-cmdb
-    hostname: mock-cmdb
+      context: ./jira-cmdb-api
+    container_name: jira-cmdb-api
+    hostname: jira-cmdb-api
     environment:
       CRIBL_API_USERNAME: ${CRIBL_API_USERNAME:-}
       CRIBL_API_PASSWORD: ${CRIBL_API_PASSWORD:-}
@@ -12,7 +12,7 @@ services:
       CRIBL_GROUP_NAME: ${CRIBL_GROUP_NAME:-default}
       CRIBL_LOOKUP_ID: ${CRIBL_LOOKUP_ID:-jira_cmdb_mock.csv}
     volumes:
-      - ./jira-cmdb/data.json:/app/data.json:ro
+      - ./jira-cmdb-api/data.json:/app/data.json:ro
     ports:
       - "13000:3000"
     restart: unless-stopped
@@ -22,7 +22,7 @@ services:
     container_name: cribl-leader1
     hostname: leader1
     depends_on:
-      - mock-cmdb
+      - jira-cmdb-api
     environment:
       CRIBL_DIST_MODE: leader
       CRIBL_DIST_TOKEN: ${CRIBL_DIST_TOKEN:-criblmaster}
@@ -44,7 +44,7 @@ services:
     container_name: cribl-leader2
     hostname: leader2
     depends_on:
-      - mock-cmdb
+      - jira-cmdb-api
     environment:
       CRIBL_DIST_MODE: leader
       CRIBL_DIST_TOKEN: ${CRIBL_DIST_TOKEN:-criblmaster}
@@ -68,13 +68,13 @@ services:
     depends_on:
       - leader1
       - leader2
-      - mock-cmdb
+      - jira-cmdb-api
     environment:
       CRIBL_DIST_MODE: worker
       CRIBL_DIST_TOKEN: ${CRIBL_DIST_TOKEN:-criblmaster}
       CRIBL_DIST_LEADER_URL: tcp://${CRIBL_DIST_TOKEN:-criblmaster}@${CRIBL_WORKER_LEADER_HOST:-leader1}:4200
       CRIBL_VOLUME_DIR: /opt/cribl/config-volume
-      MOCK_CMDB_URL: http://mock-cmdb:3000/insight/objects
+      JIRA_CMDB_API_URL: http://jira-cmdb-api:3000/insight/objects
     ports:
       - "19100:9000"
     volumes:
@@ -88,13 +88,13 @@ services:
     depends_on:
       - leader1
       - leader2
-      - mock-cmdb
+      - jira-cmdb-api
     environment:
       CRIBL_DIST_MODE: worker
       CRIBL_DIST_TOKEN: ${CRIBL_DIST_TOKEN:-criblmaster}
       CRIBL_DIST_LEADER_URL: tcp://${CRIBL_DIST_TOKEN:-criblmaster}@${CRIBL_WORKER_LEADER_HOST:-leader1}:4200
       CRIBL_VOLUME_DIR: /opt/cribl/config-volume
-      MOCK_CMDB_URL: http://mock-cmdb:3000/insight/objects
+      JIRA_CMDB_API_URL: http://jira-cmdb-api:3000/insight/objects
     ports:
       - "19101:9000"
     volumes:
