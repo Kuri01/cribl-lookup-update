@@ -1,0 +1,10 @@
+{
+  "name": "mock-jira-insight",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Small mock Jira Insight API",
+  "scripts": {
+    "build": "mkdir -p dist && echo 'mock-jira-insight build marker' > dist/.noop",
+    "start": "node server.js"
+  }
+}

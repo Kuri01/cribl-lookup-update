@@ -8,7 +8,8 @@ async function bootstrap() {
   const config = getConfigFromEnv();
   await app.listen(config.port);
 
-  console.log(`Mock Jira Insight CMDB server listening on http://localhost:${config.port}${config.cmdbEndpoint}`);
+  console.log(`Jira CMDB API listening on http://localhost:${config.port}${config.cmdbEndpoint}`);
+  console.log(`Jira Insight source URL: ${config.jiraInsightApiUrl}`);
   console.log(
     `Lookup updater endpoint listening on http://localhost:${config.port}${config.lookupUpdateEndpoint}`,
   );

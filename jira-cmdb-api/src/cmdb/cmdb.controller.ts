@@ -21,9 +21,9 @@ export class CmdbController {
   ) {}
 
   @Get('insight/objects')
-  getCmdbData() {
+  async getCmdbData() {
     try {
-      return this.repository.loadData();
+      return await this.repository.loadData();
     } catch (error) {
       const details = error instanceof Error ? error.message : 'Unknown error';
       throw new HttpException(

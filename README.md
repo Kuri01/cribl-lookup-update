@@ -1,24 +1,26 @@
 # Cribl Stream on Docker Compose
 
-This repo boots a **4-node distributed Cribl Stream topology**:
+This repo boots a **distributed Cribl Stream topology** with helper APIs:
 
 - `leader1` (primary candidate)
 - `leader2` (standby failover candidate)
 - `worker1`
 - `worker2`
-- `jira-cmdb-api` (mock Jira Insight CMDB API, powered by `jira-cmdb-api` Nest app)
+- `mock-jira-insight` (small API that serves `data.json`)
+- `jira-cmdb-api` (Nest API that fetches from `mock-jira-insight` and updates Cribl lookups)
 
 ## What this setup does
 
 - Runs 2 Leaders in **failover resiliency** mode.
 - Uses a shared Docker volume (`leaders_failover`) as the failover volume.
 - Connects both Workers to one Leader endpoint (`leader1` by default).
-- Exposes a mock CMDB API for workers at `http://jira-cmdb-api:3000/insight/objects`.
+- Exposes `mock-jira-insight` data API at `http://mock-jira-insight:3000/insight/objects`.
+- Exposes `jira-cmdb-api` update API that reads from `mock-jira-insight` and updates/deploys lookups in Cribl.
 
 ## Prerequisites
 
 - Docker + Docker Compose plugin (`docker compose`)
-- Enough memory/CPU for 4 Cribl containers + 1 mock API container
+- Enough memory/CPU for 4 Cribl containers + 2 helper API containers
 
 ## Start
 
@@ -50,23 +52,31 @@ Open UIs:
 - Worker 1: http://localhost:19100
 - Worker 2: http://localhost:19101
 
-Mock CMDB endpoint from host:
+Jira CMDB API endpoint from host:
 
 - http://localhost:13000/insight/objects
 
-`jira-cmdb-api/data.json` is bind-mounted into the container, so changing this file is picked up dynamically on the next request (no image rebuild required).
+Mock Jira Insight endpoint from host:
+
+- http://localhost:13001/insight/objects
+
+`mock-jira-insight/data.json` is bind-mounted into the container, so changing this file is picked up dynamically on the next request (no image rebuild required).
 
 Lookup update endpoint from host:
 
 - `POST http://localhost:13000/cribl/lookups/update`
 
-Mock CMDB endpoint from Cribl containers:
+Jira CMDB API endpoint from Cribl containers:
 
 - `http://jira-cmdb-api:3000/insight/objects`
 
 Lookup update endpoint from Cribl containers:
 
 - `http://jira-cmdb-api:3000/cribl/lookups/update`
+
+Mock Jira Insight endpoint from Cribl containers:
+
+- `http://mock-jira-insight:3000/insight/objects`
 
 ## Environment knobs
 
@@ -86,23 +96,25 @@ CRIBL_DIST_TOKEN=mytoken CRIBL_WORKER_LEADER_HOST=leader1 docker compose up -d
 
 In Cribl failover, only one Leader is active at a time. In real environments, Workers should target a stable VIP/DNS/load-balancer endpoint for Leader connectivity. This compose file defaults workers to `leader1` for local bootstrap simplicity.
 
-## Verify Mock CMDB From Worker
+## Verify APIs From Worker
 
 If `curl` is available in the worker image:
 
 ```bash
+docker compose exec worker1 curl -sS http://mock-jira-insight:3000/insight/objects
 docker compose exec worker1 curl -sS http://jira-cmdb-api:3000/insight/objects
 ```
 
 If `curl` is not available, run a one-off container on the same network:
 
 ```bash
+docker run --rm --network cribl_default curlimages/curl:8.12.1 -sS http://mock-jira-insight:3000/insight/objects
 docker run --rm --network cribl_default curlimages/curl:8.12.1 -sS http://jira-cmdb-api:3000/insight/objects
 ```
 
 ## Update Cribl Lookup from Mock CMDB
 
-The jira-cmdb-api service runs the full Cribl lookup flow using `jira-cmdb-api/data.json` converted to CSV:
+The `jira-cmdb-api` service runs the full Cribl lookup flow using data fetched from `mock-jira-insight` (`mock-jira-insight/data.json`) converted to CSV:
 - Upload file (`PUT /system/lookups`)
 - Replace or create lookup (`PATCH` / fallback `POST /system/lookups`)
 - Selective deploy to worker group (`PATCH /master/groups/{groupName}/deploy`)
@@ -144,6 +156,7 @@ curl -sS -X POST http://localhost:13000/cribl/lookups/update \
 
 You can also set defaults in `docker-compose.yml` via:
 
+- `JIRA_INSIGHT_API_URL` (default: `http://mock-jira-insight:3000/insight/objects`)
 - `CRIBL_API_BASE_URL` (default: `http://leader1:9000/api/v1`)
 - `CRIBL_GROUP_NAME` (default: `default`)
 - `CRIBL_LOOKUP_ID` (default: `jira_cmdb_mock.csv`)
@@ -193,6 +206,7 @@ Uzupełnij minimum:
 
 Domyślne wartości zwykle zostają bez zmian:
 
+- `JIRA_INSIGHT_API_URL` (u nas: `http://mock-jira-insight:3000/insight/objects`)
 - `CRIBL_API_BASE_URL` (u nas: `http://leader1:9000/api/v1`)
 - `CRIBL_GROUP_NAME` (u nas: `default`)
 - `CRIBL_LOOKUP_ID` (u nas: `jira_cmdb_mock.csv`)
@@ -207,14 +221,21 @@ To uruchamia:
 
 - 2x Cribl Leader
 - 2x Cribl Worker
-- `jira-cmdb-api` (API oparte o `jira-cmdb-api`)
+- `mock-jira-insight` (API z plikiem `data.json`)
+- `jira-cmdb-api` (API aktualizujące lookupi w Cribl)
 
 ### 4. Najważniejsze endpointy API
 
-Pobranie mock CMDB:
+Pobranie danych z `jira-cmdb-api`:
 
 ```bash
 curl http://localhost:13000/insight/objects
+```
+
+Pobranie surowych danych z `mock-jira-insight`:
+
+```bash
+curl http://localhost:13001/insight/objects
 ```
 
 Aktualizacja lookupa w Cribl (upload + replace/create + deploy):
@@ -237,7 +258,7 @@ curl -sS -X POST http://localhost:13000/cribl/lookups/update \
 
 Edytuj plik:
 
-- `jira-cmdb-api/data.json`
+- `mock-jira-insight/data.json`
 
 Ten plik jest podpięty jako volume do kontenera, więc zmiany są widoczne od razu przy następnym wywołaniu endpointu.
 Nie trzeba robić `docker compose build`.

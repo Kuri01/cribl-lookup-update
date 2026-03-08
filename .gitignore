@@ -2,4 +2,6 @@ node_modules/
 .turbo/
 jira-cmdb-api/node_modules/
 jira-cmdb-api/dist/
+mock-jira-insight/node_modules/
+mock-jira-insight/dist/
 .env

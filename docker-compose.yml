@@ -1,18 +1,30 @@
 services:
+  mock-jira-insight:
+    build:
+      context: ./mock-jira-insight
+    container_name: mock-jira-insight
+    hostname: mock-jira-insight
+    volumes:
+      - ./mock-jira-insight/data.json:/app/data.json:ro
+    ports:
+      - "13001:3000"
+    restart: unless-stopped
+
   jira-cmdb-api:
     build:
       context: ./jira-cmdb-api
     container_name: jira-cmdb-api
     hostname: jira-cmdb-api
+    depends_on:
+      - mock-jira-insight
     environment:
+      JIRA_INSIGHT_API_URL: ${JIRA_INSIGHT_API_URL:-http://mock-jira-insight:3000/insight/objects}
       CRIBL_API_USERNAME: ${CRIBL_API_USERNAME:-}
       CRIBL_API_PASSWORD: ${CRIBL_API_PASSWORD:-}
       CRIBL_API_TOKEN: ${CRIBL_API_TOKEN:-}
       CRIBL_API_BASE_URL: ${CRIBL_API_BASE_URL:-http://leader1:9000/api/v1}
       CRIBL_GROUP_NAME: ${CRIBL_GROUP_NAME:-default}
       CRIBL_LOOKUP_ID: ${CRIBL_LOOKUP_ID:-jira_cmdb_mock.csv}
-    volumes:
-      - ./jira-cmdb-api/data.json:/app/data.json:ro
     ports:
       - "13000:3000"
     restart: unless-stopped

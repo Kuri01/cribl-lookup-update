@@ -3,7 +3,8 @@
   "private": true,
   "packageManager": "npm@11.8.0",
   "workspaces": [
-    "jira-cmdb-api"
+    "jira-cmdb-api",
+    "mock-jira-insight"
   ],
   "scripts": {
     "build": "turbo run build",

@@ -52,7 +52,7 @@ export class LookupUpdateService {
       );
     }
 
-    const payload = this.repository.loadData();
+    const payload = await this.repository.loadData();
     const csv = this.serializer.serialize(payload);
 
     if (dryRun) {

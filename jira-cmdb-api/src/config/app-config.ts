@@ -1,10 +1,8 @@
-import path from 'node:path';
-
 export type LookupMode = 'memory' | 'disk';
 
 export class AppConfig {
   port: number;
-  dataPath: string;
+  jiraInsightApiUrl: string;
   cmdbEndpoint: string;
   lookupUpdateEndpoint: string;
   defaultCriblApiBaseUrl: string;
@@ -17,7 +15,7 @@ export class AppConfig {
 
   constructor(input: {
     port: number;
-    dataPath: string;
+    jiraInsightApiUrl: string;
     cmdbEndpoint: string;
     lookupUpdateEndpoint: string;
     defaultCriblApiBaseUrl: string;
@@ -29,7 +27,7 @@ export class AppConfig {
     defaultCriblPassword?: string;
   }) {
     this.port = input.port;
-    this.dataPath = input.dataPath;
+    this.jiraInsightApiUrl = input.jiraInsightApiUrl;
     this.cmdbEndpoint = input.cmdbEndpoint;
     this.lookupUpdateEndpoint = input.lookupUpdateEndpoint;
     this.defaultCriblApiBaseUrl = input.defaultCriblApiBaseUrl;
@@ -45,7 +43,7 @@ export class AppConfig {
 export function getConfigFromEnv(env: NodeJS.ProcessEnv = process.env): AppConfig {
   return new AppConfig({
     port: Number(env.PORT) || 3000,
-    dataPath: env.CMDB_DATA_PATH || path.resolve(process.cwd(), 'data.json'),
+    jiraInsightApiUrl: env.JIRA_INSIGHT_API_URL || 'http://mock-jira-insight:3000/insight/objects',
     cmdbEndpoint: env.ENDPOINT || '/insight/objects',
     lookupUpdateEndpoint: env.LOOKUP_UPDATE_ENDPOINT || '/cribl/lookups/update',
     defaultCriblApiBaseUrl: env.CRIBL_API_BASE_URL || 'http://leader1:9000/api/v1',

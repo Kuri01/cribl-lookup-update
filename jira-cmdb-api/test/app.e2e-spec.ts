@@ -6,14 +6,42 @@ import { AppModule } from './../src/app.module';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
+  const insightPayload = {
+    values: [
+      {
+        id: '456',
+        label: 'SRV-123',
+        objectKey: 'ITSM-456',
+      },
+    ],
+  };
 
   beforeEach(async () => {
+    jest.spyOn(global, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes('/insight/objects')) {
+        return new Response(JSON.stringify(insightPayload), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(JSON.stringify({ error: 'Unexpected URL in test', url }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();
+  });
+
+  afterEach(async () => {
+    jest.restoreAllMocks();
+    await app.close();
   });
 
   it('/insight/objects (GET)', () => {
