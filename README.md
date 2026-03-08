@@ -47,9 +47,17 @@ Mock CMDB endpoint from host:
 
 - http://localhost:13000/insight/objects
 
+Lookup update endpoint from host:
+
+- `POST http://localhost:13000/cribl/lookups/update`
+
 Mock CMDB endpoint from Cribl containers:
 
 - `http://mock-cmdb:3000/insight/objects`
+
+Lookup update endpoint from Cribl containers:
+
+- `http://mock-cmdb:3000/cribl/lookups/update`
 
 ## Environment knobs
 
@@ -82,6 +90,42 @@ If `curl` is not available, run a one-off container on the same network:
 ```bash
 docker run --rm --network cribl_default curlimages/curl:8.12.1 -sS http://mock-cmdb:3000/insight/objects
 ```
+
+## Update Cribl Lookup from Mock CMDB
+
+The mock service can run the Cribl lookup update flow (`PUT /system/lookups` then `PATCH /system/lookups/{id}`) using `mock-cmdb/data.json` converted to CSV.
+
+Required:
+
+- Valid Cribl API token
+- Existing in-memory lookup file (default id: `jira_cmdb_mock.csv`)
+
+Quick dry run (shows URLs and CSV preview, no Cribl changes):
+
+```bash
+curl -sS -X POST http://localhost:13000/cribl/lookups/update \
+  -H 'Content-Type: application/json' \
+  -d '{"dryRun": true}' | jq
+```
+
+Real update:
+
+```bash
+curl -sS -X POST http://localhost:13000/cribl/lookups/update \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "token": "YOUR_CRIBL_BEARER_TOKEN",
+    "groupName": "default",
+    "lookupId": "jira_cmdb_mock.csv"
+  }' | jq
+```
+
+You can also set defaults in `docker-compose.yml` via:
+
+- `CRIBL_API_BASE_URL` (default: `http://leader1:9000/api/v1`)
+- `CRIBL_GROUP_NAME` (default: `default`)
+- `CRIBL_LOOKUP_ID` (default: `jira_cmdb_mock.csv`)
+- `CRIBL_API_TOKEN` (optional, if you do not want to pass `token` in the request body)
 
 ## Stop and clean
 
