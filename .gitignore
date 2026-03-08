@@ -1,5 +1,4 @@
 node_modules/
 .turbo/
-mock-cmdb/node_modules/
-mock-cmdb/dist/
-.idea
+jira-cmdb/node_modules/
+jira-cmdb/dist/

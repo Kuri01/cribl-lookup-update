@@ -6,7 +6,7 @@ This repo boots a **4-node distributed Cribl Stream topology**:
 - `leader2` (standby failover candidate)
 - `worker1`
 - `worker2`
-- `mock-cmdb` (mock Jira Insight CMDB API)
+- `mock-cmdb` (mock Jira Insight CMDB API, powered by `jira-cmdb` Nest app)
 
 ## What this setup does
 
@@ -28,7 +28,7 @@ docker compose up -d
 
 ## Turborepo
 
-Root workspace now uses Turborepo with `mock-cmdb` as a package.
+Root workspace now uses Turborepo with `jira-cmdb` as a package.
 
 ```bash
 npm install
@@ -93,7 +93,7 @@ docker run --rm --network cribl_default curlimages/curl:8.12.1 -sS http://mock-c
 
 ## Update Cribl Lookup from Mock CMDB
 
-The mock service can run the Cribl lookup update flow (`PUT /system/lookups` then `PATCH /system/lookups/{id}`) using `mock-cmdb/data.json` converted to CSV.
+The mock service can run the Cribl lookup update flow (`PUT /system/lookups` then `PATCH /system/lookups/{id}`) using `jira-cmdb/data.json` converted to CSV.
 
 Required:
 

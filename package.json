@@ -3,7 +3,7 @@
   "private": true,
   "packageManager": "npm@11.8.0",
   "workspaces": [
-    "mock-cmdb"
+    "jira-cmdb"
   ],
   "scripts": {
     "build": "turbo run build",

@@ -16,10 +16,25 @@ describe('AppController (e2e)', () => {
     await app.init();
   });
 
-  it('/ (GET)', () => {
+  it('/insight/objects (GET)', () => {
     return request(app.getHttpServer())
-      .get('/')
+      .get('/insight/objects')
       .expect(200)
-      .expect('Hello World!');
+      .expect((res) => {
+        expect(res.body).toHaveProperty('values');
+        expect(Array.isArray(res.body.values)).toBe(true);
+      });
+  });
+
+  it('/cribl/lookups/update (POST) dry run', () => {
+    return request(app.getHttpServer())
+      .post('/cribl/lookups/update')
+      .send({ dryRun: true })
+      .expect(200)
+      .expect((res) => {
+        expect(res.body).toHaveProperty('dryRun', true);
+        expect(res.body).toHaveProperty('uploadUrl');
+        expect(res.body).toHaveProperty('patchUrl');
+      });
   });
 });

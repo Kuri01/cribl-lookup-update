@@ -1,12 +1,10 @@
-import { LookupMode, LookupUpdateRequest, CmdbCsvSerializer, CmdbRepository, CriblLookupsClient } from '../types';
+import { Injectable } from '@nestjs/common';
 
-export type LookupUpdateDefaults = {
-  criblBaseUrl: string;
-  groupName?: string;
-  lookupId: string;
-  mode?: LookupMode;
-  token?: string;
-};
+import { AppConfig } from '../config/app-config';
+import { CmdbCsvSerializer } from '../cmdb/cmdb-csv.serializer';
+import { CmdbRepository } from '../cmdb/cmdb.repository';
+import { LookupUpdateRequest } from '../cmdb/cmdb.types';
+import { CriblLookupsClient } from '../cribl/cribl-lookups.client';
 
 export class RequestValidationError extends Error {
   constructor(message: string) {
@@ -15,26 +13,28 @@ export class RequestValidationError extends Error {
   }
 }
 
+@Injectable()
 export class LookupUpdateService {
   constructor(
+    private readonly config: AppConfig,
     private readonly repository: CmdbRepository,
     private readonly serializer: CmdbCsvSerializer,
     private readonly criblClient: CriblLookupsClient,
-    private readonly defaults: LookupUpdateDefaults
   ) {}
 
   async execute(request: LookupUpdateRequest): Promise<unknown> {
     const dryRun = Boolean(request.dryRun);
-    const criblBaseUrl = request.criblBaseUrl ?? this.defaults.criblBaseUrl;
-    const token = request.token ?? this.defaults.token;
-    const groupName = request.groupName ?? this.defaults.groupName;
-    const mode = request.mode ?? this.defaults.mode;
-    const lookupIdRaw = request.lookupId ?? this.defaults.lookupId;
+    const criblBaseUrl = request.criblBaseUrl ?? this.config.defaultCriblApiBaseUrl;
+    const token = request.token ?? this.config.defaultCriblToken;
+    const groupName = request.groupName ?? this.config.defaultCriblGroupName;
+    const mode = request.mode ?? this.config.defaultCriblLookupMode;
+    const lookupIdRaw = request.lookupId ?? this.config.defaultCriblLookupId;
     const lookupId = lookupIdRaw.endsWith('.csv') ? lookupIdRaw : `${lookupIdRaw}.csv`;
 
     if (!criblBaseUrl) {
       throw new RequestValidationError('Missing criblBaseUrl (or CRIBL_API_BASE_URL env).');
     }
+
     if (!token && !dryRun) {
       throw new RequestValidationError('Missing token (or CRIBL_API_TOKEN env).');
     }
@@ -47,6 +47,7 @@ export class LookupUpdateService {
       const lookupsPath = groupName
         ? `${normalizedBase}/m/${encodeURIComponent(groupName)}/system/lookups`
         : `${normalizedBase}/system/lookups`;
+
       return {
         dryRun: true,
         uploadUrl: `${lookupsPath}?filename=${encodeURIComponent(lookupId)}`,

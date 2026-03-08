@@ -1,7 +1,7 @@
 services:
   mock-cmdb:
     build:
-      context: ./mock-cmdb
+      context: ./jira-cmdb
     container_name: mock-cmdb
     hostname: mock-cmdb
     environment:

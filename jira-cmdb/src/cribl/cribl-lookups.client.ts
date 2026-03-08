@@ -1,6 +1,7 @@
-import { CriblLookupsClient, LookupMode, UploadLookupResponse } from '../types';
+import { Injectable } from '@nestjs/common';
 
-type HttpClient = typeof fetch;
+import { LookupMode } from '../config/app-config';
+import { UploadLookupResponse } from '../cmdb/cmdb.types';
 
 function buildLookupsPath(baseUrl: string, groupName?: string): string {
   const normalizedBase = baseUrl.replace(/\/+$/, '');
@@ -14,16 +15,15 @@ export class CriblApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
-    public readonly responseBody: unknown
+    public readonly responseBody: unknown,
   ) {
     super(message);
     this.name = 'CriblApiError';
   }
 }
 
-export class HttpCriblLookupsClient implements CriblLookupsClient {
-  constructor(private readonly httpClient: HttpClient = fetch) {}
-
+@Injectable()
+export class CriblLookupsClient {
   async uploadLookupCsv(input: {
     baseUrl: string;
     groupName?: string;
@@ -33,7 +33,7 @@ export class HttpCriblLookupsClient implements CriblLookupsClient {
   }): Promise<UploadLookupResponse> {
     const lookupsPath = buildLookupsPath(input.baseUrl, input.groupName);
     const uploadUrl = `${lookupsPath}?filename=${encodeURIComponent(input.fileName)}`;
-    const response = await this.httpClient(uploadUrl, {
+    const response = await fetch(uploadUrl, {
       method: 'PUT',
       headers: {
         Authorization: `Bearer ${input.token}`,
@@ -41,10 +41,12 @@ export class HttpCriblLookupsClient implements CriblLookupsClient {
       },
       body: input.csvContent,
     });
+
     const body = (await response.json()) as UploadLookupResponse;
     if (!response.ok || !body.filename) {
       throw new CriblApiError('Failed to upload lookup CSV to Cribl.', response.status, body);
     }
+
     return body;
   }
 
@@ -58,6 +60,7 @@ export class HttpCriblLookupsClient implements CriblLookupsClient {
   }): Promise<unknown> {
     const lookupsPath = buildLookupsPath(input.baseUrl, input.groupName);
     const patchUrl = `${lookupsPath}/${encodeURIComponent(input.lookupId)}`;
+
     const payload: {
       id: string;
       fileInfo: { filename: string };
@@ -66,9 +69,10 @@ export class HttpCriblLookupsClient implements CriblLookupsClient {
       id: input.lookupId,
       fileInfo: { filename: input.uploadedTempFilename },
     };
+
     if (input.mode) payload.mode = input.mode;
 
-    const response = await this.httpClient(patchUrl, {
+    const response = await fetch(patchUrl, {
       method: 'PATCH',
       headers: {
         Authorization: `Bearer ${input.token}`,
@@ -76,10 +80,12 @@ export class HttpCriblLookupsClient implements CriblLookupsClient {
       },
       body: JSON.stringify(payload),
     });
+
     const body = (await response.json()) as unknown;
     if (!response.ok) {
       throw new CriblApiError('Failed to patch existing lookup in Cribl.', response.status, body);
     }
+
     return body;
   }
 }

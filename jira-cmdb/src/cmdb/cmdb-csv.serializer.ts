@@ -1,4 +1,6 @@
-import { CmdbCsvSerializer, CmdbPayload } from '../types';
+import { Injectable } from '@nestjs/common';
+
+import { CmdbPayload } from './cmdb.types';
 
 function escapeCsv(value: string): string {
   if (value.includes('"') || value.includes(',') || value.includes('\n')) {
@@ -14,7 +16,8 @@ function valueToString(value: unknown): string {
   return JSON.stringify(value);
 }
 
-export class DefaultCmdbCsvSerializer implements CmdbCsvSerializer {
+@Injectable()
+export class CmdbCsvSerializer {
   serialize(payload: CmdbPayload): string {
     const values = Array.isArray(payload.values) ? payload.values : [];
     const attributeNames = new Set<string>();
