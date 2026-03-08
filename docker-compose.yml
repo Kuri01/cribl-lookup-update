@@ -11,6 +11,8 @@ services:
       CRIBL_API_BASE_URL: ${CRIBL_API_BASE_URL:-http://leader1:9000/api/v1}
       CRIBL_GROUP_NAME: ${CRIBL_GROUP_NAME:-default}
       CRIBL_LOOKUP_ID: ${CRIBL_LOOKUP_ID:-jira_cmdb_mock.csv}
+    volumes:
+      - ./jira-cmdb/data.json:/app/data.json:ro
     ports:
       - "13000:3000"
     restart: unless-stopped

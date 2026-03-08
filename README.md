@@ -54,6 +54,8 @@ Mock CMDB endpoint from host:
 
 - http://localhost:13000/insight/objects
 
+`jira-cmdb/data.json` is bind-mounted into the container, so changing this file is picked up dynamically on the next request (no image rebuild required).
+
 Lookup update endpoint from host:
 
 - `POST http://localhost:13000/cribl/lookups/update`
