@@ -1,0 +1,76 @@
+{
+  "startAt": 0,
+  "maxResults": 25,
+  "total": 1,
+  "isLast": true,
+  "values": [
+    {
+      "id": "456",
+      "globalId": "workspace-123:456",
+      "label": "SRV-123",
+      "objectKey": "ITSM-456",
+      "objectType": {
+        "id": "12",
+        "name": "Server"
+      },
+      "avatar": {
+        "url16": "https://api.atlassian.com/jsm/assets/workspace/xyz/v1/objecttype/12/icon.png"
+      },
+      "timestamp": "2026-03-06T10:15:22.000Z",
+      "hasAvatar": false,
+      "attributes": [
+        {
+          "objectTypeAttribute": {
+            "id": "101",
+            "name": "Name"
+          },
+          "objectAttributeValues": [
+            {
+              "value": "SRV-123",
+              "displayValue": "SRV-123"
+            }
+          ]
+        },
+        {
+          "objectTypeAttribute": {
+            "id": "102",
+            "name": "Hostname"
+          },
+          "objectAttributeValues": [
+            {
+              "value": "srv-123.prod.local",
+              "displayValue": "srv-123.prod.local"
+            }
+          ]
+        },
+        {
+          "objectTypeAttribute": {
+            "id": "103",
+            "name": "Environment"
+          },
+          "objectAttributeValues": [
+            {
+              "value": "Production",
+              "displayValue": "Production"
+            }
+          ]
+        },
+        {
+          "objectTypeAttribute": {
+            "id": "104",
+            "name": "Owner"
+          },
+          "objectAttributeValues": [
+            {
+              "value": {
+                "accountId": "5d123abc456def789",
+                "displayName": "Jan Kowalski"
+              },
+              "displayValue": "Jan Kowalski"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+services:
+  mock-cmdb:
+    build:
+      context: ./mock-cmdb
+    container_name: mock-cmdb
+    hostname: mock-cmdb
+    ports:
+      - "13000:3000"
+    restart: unless-stopped
+
+  leader1:
+    image: ${CRIBL_IMAGE:-cribl/cribl:latest}
+    container_name: cribl-leader1
+    hostname: leader1
+    depends_on:
+      - mock-cmdb
+    environment:
+      CRIBL_DIST_MODE: leader
+      CRIBL_DIST_TOKEN: ${CRIBL_DIST_TOKEN:-criblmaster}
+      CRIBL_DIST_LEADER_URL: tcp://${CRIBL_DIST_TOKEN:-criblmaster}@0.0.0.0:4200
+      CRIBL_DIST_MASTER_RESILIENCY: failover
+      CRIBL_DIST_MASTER_FAILOVER_VOLUME: /opt/cribl/failover-volume
+      CRIBL_DIST_MASTER_FAILOVER_PERIOD: 5s
+      CRIBL_DIST_MASTER_FAILOVER_MISSED_HB_LIMIT: 3
+      CRIBL_VOLUME_DIR: /opt/cribl/config-volume
+    ports:
+      - "19000:9000"
+    volumes:
+      - leader1_config:/opt/cribl/config-volume
+      - leaders_failover:/opt/cribl/failover-volume
+    restart: unless-stopped
+
+  leader2:
+    image: ${CRIBL_IMAGE:-cribl/cribl:latest}
+    container_name: cribl-leader2
+    hostname: leader2
+    depends_on:
+      - mock-cmdb
+    environment:
+      CRIBL_DIST_MODE: leader
+      CRIBL_DIST_TOKEN: ${CRIBL_DIST_TOKEN:-criblmaster}
+      CRIBL_DIST_LEADER_URL: tcp://${CRIBL_DIST_TOKEN:-criblmaster}@0.0.0.0:4200
+      CRIBL_DIST_MASTER_RESILIENCY: failover
+      CRIBL_DIST_MASTER_FAILOVER_VOLUME: /opt/cribl/failover-volume
+      CRIBL_DIST_MASTER_FAILOVER_PERIOD: 5s
+      CRIBL_DIST_MASTER_FAILOVER_MISSED_HB_LIMIT: 3
+      CRIBL_VOLUME_DIR: /opt/cribl/config-volume
+    ports:
+      - "19001:9000"
+    volumes:
+      - leader2_config:/opt/cribl/config-volume
+      - leaders_failover:/opt/cribl/failover-volume
+    restart: unless-stopped
+
+  worker1:
+    image: ${CRIBL_IMAGE:-cribl/cribl:latest}
+    container_name: cribl-worker1
+    hostname: worker1
+    depends_on:
+      - leader1
+      - leader2
+      - mock-cmdb
+    environment:
+      CRIBL_DIST_MODE: worker
+      CRIBL_DIST_TOKEN: ${CRIBL_DIST_TOKEN:-criblmaster}
+      CRIBL_DIST_LEADER_URL: tcp://${CRIBL_DIST_TOKEN:-criblmaster}@${CRIBL_WORKER_LEADER_HOST:-leader1}:4200
+      CRIBL_VOLUME_DIR: /opt/cribl/config-volume
+      MOCK_CMDB_URL: http://mock-cmdb:3000/insight/objects
+    ports:
+      - "19100:9000"
+    volumes:
+      - worker1_config:/opt/cribl/config-volume
+    restart: unless-stopped
+
+  worker2:
+    image: ${CRIBL_IMAGE:-cribl/cribl:latest}
+    container_name: cribl-worker2
+    hostname: worker2
+    depends_on:
+      - leader1
+      - leader2
+      - mock-cmdb
+    environment:
+      CRIBL_DIST_MODE: worker
+      CRIBL_DIST_TOKEN: ${CRIBL_DIST_TOKEN:-criblmaster}
+      CRIBL_DIST_LEADER_URL: tcp://${CRIBL_DIST_TOKEN:-criblmaster}@${CRIBL_WORKER_LEADER_HOST:-leader1}:4200
+      CRIBL_VOLUME_DIR: /opt/cribl/config-volume
+      MOCK_CMDB_URL: http://mock-cmdb:3000/insight/objects
+    ports:
+      - "19101:9000"
+    volumes:
+      - worker2_config:/opt/cribl/config-volume
+    restart: unless-stopped
+
+volumes:
+  leader1_config:
+  leader2_config:
+  leaders_failover:
+  worker1_config:
+  worker2_config:
