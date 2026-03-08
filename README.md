@@ -21,6 +21,7 @@ This repo boots a **distributed Cribl Stream topology** with helper APIs:
 
 - Docker + Docker Compose plugin (`docker compose`)
 - Enough memory/CPU for 4 Cribl containers + 2 helper API containers
+- Node.js is **not required** on your host if you use Docker builds (`docker compose up --build`).
 
 ## Start
 
@@ -185,6 +186,8 @@ Musisz mieć zainstalowane:
 
 - Docker
 - Docker Compose (`docker compose`)
+
+Jeśli uruchamiasz i budujesz przez Docker Compose, **Node.js nie jest wymagany** lokalnie na Twoim komputerze.
 
 Opcjonalnie (do uruchamiania lokalnie bez Dockera):
 
