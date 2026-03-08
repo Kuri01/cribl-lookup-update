@@ -22,6 +22,13 @@ This repo boots a **4-node distributed Cribl Stream topology**:
 
 ## Start
 
+Set API auth defaults:
+
+```bash
+cp .env.example .env
+# edit .env and set CRIBL_API_USERNAME / CRIBL_API_PASSWORD
+```
+
 ```bash
 docker compose up -d
 ```
@@ -94,10 +101,11 @@ docker run --rm --network cribl_default curlimages/curl:8.12.1 -sS http://mock-c
 ## Update Cribl Lookup from Mock CMDB
 
 The mock service can run the Cribl lookup update flow (`PUT /system/lookups` then `PATCH /system/lookups/{id}`) using `jira-cmdb/data.json` converted to CSV.
+If the lookup does not exist, the service automatically creates it (`POST /system/lookups`) after upload.
 
 Required:
 
-- Valid Cribl API token
+- Valid Cribl API auth (username/password or bearer token)
 - Existing in-memory lookup file (default id: `jira_cmdb_mock.csv`)
 
 Quick dry run (shows URLs and CSV preview, no Cribl changes):
@@ -114,7 +122,8 @@ Real update:
 curl -sS -X POST http://localhost:13000/cribl/lookups/update \
   -H 'Content-Type: application/json' \
   -d '{
-    "token": "YOUR_CRIBL_BEARER_TOKEN",
+    "username": "YOUR_CRIBL_USERNAME",
+    "password": "YOUR_CRIBL_PASSWORD",
     "groupName": "default",
     "lookupId": "jira_cmdb_mock.csv"
   }' | jq
@@ -125,7 +134,8 @@ You can also set defaults in `docker-compose.yml` via:
 - `CRIBL_API_BASE_URL` (default: `http://leader1:9000/api/v1`)
 - `CRIBL_GROUP_NAME` (default: `default`)
 - `CRIBL_LOOKUP_ID` (default: `jira_cmdb_mock.csv`)
-- `CRIBL_API_TOKEN` (optional, if you do not want to pass `token` in the request body)
+- `CRIBL_API_USERNAME`, `CRIBL_API_PASSWORD` (recommended, token fetched dynamically per request)
+- `CRIBL_API_TOKEN` (optional fallback, if you want to pass/use a bearer token directly)
 
 ## Stop and clean
 

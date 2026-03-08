@@ -12,6 +12,8 @@ export class AppConfig {
   defaultCriblLookupId: string;
   defaultCriblLookupMode?: LookupMode;
   defaultCriblToken?: string;
+  defaultCriblUsername?: string;
+  defaultCriblPassword?: string;
 
   constructor(input: {
     port: number;
@@ -23,6 +25,8 @@ export class AppConfig {
     defaultCriblLookupId: string;
     defaultCriblLookupMode?: LookupMode;
     defaultCriblToken?: string;
+    defaultCriblUsername?: string;
+    defaultCriblPassword?: string;
   }) {
     this.port = input.port;
     this.dataPath = input.dataPath;
@@ -33,6 +37,8 @@ export class AppConfig {
     this.defaultCriblLookupId = input.defaultCriblLookupId;
     this.defaultCriblLookupMode = input.defaultCriblLookupMode;
     this.defaultCriblToken = input.defaultCriblToken;
+    this.defaultCriblUsername = input.defaultCriblUsername;
+    this.defaultCriblPassword = input.defaultCriblPassword;
   }
 }
 
@@ -47,5 +53,7 @@ export function getConfigFromEnv(env: NodeJS.ProcessEnv = process.env): AppConfi
     defaultCriblLookupId: env.CRIBL_LOOKUP_ID || 'jira_cmdb_mock.csv',
     defaultCriblLookupMode: env.CRIBL_LOOKUP_MODE as LookupMode | undefined,
     defaultCriblToken: env.CRIBL_API_TOKEN,
+    defaultCriblUsername: env.CRIBL_API_USERNAME,
+    defaultCriblPassword: env.CRIBL_API_PASSWORD,
   });
 }

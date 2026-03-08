@@ -4,7 +4,7 @@ import { AppConfig } from '../config/app-config';
 import { CmdbCsvSerializer } from '../cmdb/cmdb-csv.serializer';
 import { CmdbRepository } from '../cmdb/cmdb.repository';
 import { LookupUpdateRequest } from '../cmdb/cmdb.types';
-import { CriblLookupsClient } from '../cribl/cribl-lookups.client';
+import { CriblApiError, CriblLookupsClient } from '../cribl/cribl-lookups.client';
 
 export class RequestValidationError extends Error {
   constructor(message: string) {
@@ -25,7 +25,9 @@ export class LookupUpdateService {
   async execute(request: LookupUpdateRequest): Promise<unknown> {
     const dryRun = Boolean(request.dryRun);
     const criblBaseUrl = request.criblBaseUrl ?? this.config.defaultCriblApiBaseUrl;
-    const token = request.token ?? this.config.defaultCriblToken;
+    const explicitToken = request.token ?? this.config.defaultCriblToken;
+    const username = request.username ?? this.config.defaultCriblUsername;
+    const password = request.password ?? this.config.defaultCriblPassword;
     const groupName = request.groupName ?? this.config.defaultCriblGroupName;
     const mode = request.mode ?? this.config.defaultCriblLookupMode;
     const lookupIdRaw = request.lookupId ?? this.config.defaultCriblLookupId;
@@ -35,8 +37,10 @@ export class LookupUpdateService {
       throw new RequestValidationError('Missing criblBaseUrl (or CRIBL_API_BASE_URL env).');
     }
 
-    if (!token && !dryRun) {
-      throw new RequestValidationError('Missing token (or CRIBL_API_TOKEN env).');
+    if (!explicitToken && !dryRun && (!username || !password)) {
+      throw new RequestValidationError(
+        'Missing auth. Provide token or username/password (env: CRIBL_API_TOKEN or CRIBL_API_USERNAME + CRIBL_API_PASSWORD).',
+      );
     }
 
     const payload = this.repository.loadData();
@@ -58,28 +62,65 @@ export class LookupUpdateService {
       };
     }
 
+    const token =
+      explicitToken ||
+      (await this.criblClient.login({
+        baseUrl: criblBaseUrl,
+        username: username as string,
+        password: password as string,
+      }));
+
     const uploadResult = await this.criblClient.uploadLookupCsv({
       baseUrl: criblBaseUrl,
       groupName,
-      token: token as string,
+      token,
       fileName: lookupId,
       csvContent: csv,
     });
 
-    const replaceResult = await this.criblClient.replaceLookup({
-      baseUrl: criblBaseUrl,
-      groupName,
-      token: token as string,
-      lookupId,
-      uploadedTempFilename: uploadResult.filename as string,
-      mode,
-    });
+    const uploadedTempFilename = uploadResult.filename as string;
+    let result: unknown;
+    let operation: 'replaced' | 'created' = 'replaced';
+
+    try {
+      result = await this.criblClient.replaceLookup({
+        baseUrl: criblBaseUrl,
+        groupName,
+        token,
+        lookupId,
+        uploadedTempFilename,
+        mode,
+      });
+    } catch (error) {
+      if (!this.isLookupMissingError(error)) throw error;
+
+      result = await this.criblClient.createLookup({
+        baseUrl: criblBaseUrl,
+        groupName,
+        token,
+        lookupId,
+        uploadedTempFilename,
+        mode,
+      });
+      operation = 'created';
+    }
 
     return {
       success: true,
+      operation,
       lookupId,
       uploadedTempFile: uploadResult.filename,
-      criblResponse: replaceResult,
+      criblResponse: result,
     };
+  }
+
+  private isLookupMissingError(error: unknown): boolean {
+    if (!(error instanceof CriblApiError)) return false;
+    if (error.status !== 400) return false;
+
+    if (typeof error.responseBody !== 'object' || error.responseBody === null) return false;
+    const message = (error.responseBody as { message?: unknown }).message;
+    if (typeof message !== 'string') return false;
+    return /does not exist/i.test(message);
   }
 }

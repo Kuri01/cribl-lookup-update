@@ -26,6 +26,8 @@ export type CmdbPayload = {
 export type LookupUpdateRequest = {
   criblBaseUrl?: string;
   token?: string;
+  username?: string;
+  password?: string;
   groupName?: string;
   lookupId?: string;
   mode?: 'memory' | 'disk';

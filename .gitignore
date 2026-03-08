@@ -2,3 +2,4 @@ node_modules/
 .turbo/
 jira-cmdb/node_modules/
 jira-cmdb/dist/
+.env
